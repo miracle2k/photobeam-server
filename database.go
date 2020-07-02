@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
+	"github.com/go-pg/pg/v10/pgext"
 )
 
 type Account struct {
@@ -13,10 +14,10 @@ type Account struct {
 }
 
 type Connection struct {
-	Id int
-	LeftId int
-	RightId int
-	Status string   // pending, confirmed
+	Id          int
+	InitiatorId int
+	InviteeId   int
+	Status      string   // pending, confirmed
 	TimeCreated string
 }
 
@@ -48,10 +49,13 @@ func CreateSchema(db *pg.DB) error {
 }
 
 func Connect() *pg.DB {
-	return pg.Connect(&pg.Options{
+	db := pg.Connect(&pg.Options{
 		Addr:     ":5432",
 		User:     "postgres",
 		Password: "",
 		Database: "photobeam",
 	})
+	db.AddQueryHook(pgext.DebugHook{})
+	return db
 }
+

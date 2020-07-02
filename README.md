@@ -1,3 +1,4 @@
 Links to work with:
 
-- https://pg.uptrace.dev/queries/
+- https://pg.uptrace.dev/
+- https://blog.questionable.services/article/testing-http-handlers-go/

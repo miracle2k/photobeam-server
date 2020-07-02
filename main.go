@@ -98,27 +98,63 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request){
 		panic("invalid code")
 	}
 
-	// Initiator closes their connection immediately.
-	toDelete := &Connection{
-		LeftId: account.Id,
+	err = LinkAccounts(db, account, otherAccount, "pending")
+	if err != nil {
+		panic("failed to link accounts")
 	}
-	_, err = db.Model(toDelete).Where("leftId = ?leftId || rightId = >leftId").Delete()
 
-	// Create a new pending connection
-	connection := &Connection{
-		LeftId: account.Id,
-		RightId: otherAccount.Id,
+	stateResponse := &StateResponse{
+		PeerId: otherAccount.Id,
 		Status: "pending",
 	}
-
-	err = db.Insert(connection)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
 		panic(err)
 	}
 }
 
-func query(w http.ResponseWriter, r *http.Request){
+
+func QueryHandler(w http.ResponseWriter, r *http.Request){
+	stateResponse := &StateResponse{
+		PeerId: 1,
+		Status: "pending",
+	}
+	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
+		panic(err)
+	}
+
 	// out: {state: 'pending', shouldFetch: false, peerShouldFetch: false }
+}
+
+
+// Accept the connection request
+func AcceptHandler(w http.ResponseWriter, r *http.Request){
+	db := Connect()
+	defer db.Close()
+
+	actorAccount, err := ReadAuth(db, r)
+	if err != nil {
+		panic(fmt.Sprintf("auth not found %s", err))
+	}
+
+	var args AcceptArguments
+	err = GetFromReq(w, r, &args)
+	if err != nil {
+		panic("invalid args")
+	}
+
+	// If there is a connection from this peer, accept it.
+	err = AcceptLink(db, actorAccount, args.PeerId)
+	if err != nil {
+		panic("failed to accept")
+	}
+
+	stateResponse := &StateResponse{
+		PeerId: 1,
+		Status: "pending",
+	}
+	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
+		panic(err)
+	}
 }
 
 func setPicture(w http.ResponseWriter, r *http.Request){
@@ -138,6 +174,8 @@ func clearPicture(w http.ResponseWriter, r *http.Request){
 func handleRequests() {
 	http.HandleFunc("/register", RegisterHandler)
 	http.HandleFunc("/connect", ConnectHandler)
+	http.HandleFunc("/query", QueryHandler)
+	http.HandleFunc("/accept", AcceptHandler)
 	http.HandleFunc("/set", setPicture)
 	http.HandleFunc("/get", getPicture)
 	http.HandleFunc("/clear", clearPicture)
