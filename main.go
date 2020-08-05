@@ -1,11 +1,13 @@
 package main
 
 import (
+	. "bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-pg/pg/v10"
 	"github.com/satori/go.uuid"
+	"io"
 	"log"
 	rand "math/rand"
 	"net/http"
@@ -51,6 +53,9 @@ func ReadAuth(db *pg.DB, r *http.Request) (*Account, error) {
 
 }
 
+/**
+ * Called by apps to create a new account. They will get a secret key and a code for peers to connect.
+ */
 func RegisterHandler(w http.ResponseWriter, r *http.Request){
 	db := Connect()
 	defer db.Close()
@@ -74,19 +79,24 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request){
 	}
 }
 
+/**
+ * Called to connect to a peer. If you are already connected to someone, will unconnect.
+ */
 func ConnectHandler(w http.ResponseWriter, r *http.Request){
 	db := Connect()
 	defer db.Close()
 
 	account, err := ReadAuth(db, r)
 	if err != nil {
-		panic(fmt.Sprintf("auth not found %s", err))
+		http.Error(w, fmt.Sprintf("auth not found %s", err), http.StatusUnauthorized)
+		return
 	}
 
 	var args ConnectArguments
 	err = GetFromReq(w, r, &args)
 	if err != nil {
-		panic("invalid code")
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
 	}
 
 	otherAccount := new(Account)
@@ -95,12 +105,14 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request){
 		Limit(1).
 		Select()
 	if err != nil {
-		panic("invalid code")
+		http.Error(w, "invalid code", http.StatusBadRequest)
+		return
 	}
 
 	err = LinkAccounts(db, account, otherAccount, "pending")
 	if err != nil {
-		panic("failed to link accounts")
+		http.Error(w, "could not link accounts", http.StatusBadRequest)
+		return
 	}
 
 	stateResponse := &StateResponse{
@@ -113,6 +125,9 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request){
 }
 
 
+/**
+ * Return the current state of your account, including connected to who? Are there pending requests?
+ */
 func QueryHandler(w http.ResponseWriter, r *http.Request){
 	stateResponse := &StateResponse{
 		PeerId: 1,
@@ -126,26 +141,31 @@ func QueryHandler(w http.ResponseWriter, r *http.Request){
 }
 
 
-// Accept the connection request
+/**
+ * Accept a connection request from a peer (and break any existing connection).
+ */
 func AcceptHandler(w http.ResponseWriter, r *http.Request){
 	db := Connect()
 	defer db.Close()
 
 	actorAccount, err := ReadAuth(db, r)
 	if err != nil {
-		panic(fmt.Sprintf("auth not found %s", err))
+		http.Error(w, fmt.Sprintf("auth not found %s", err), http.StatusUnauthorized)
+		return
 	}
 
 	var args AcceptArguments
 	err = GetFromReq(w, r, &args)
 	if err != nil {
-		panic("invalid args")
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
 	}
 
 	// If there is a connection from this peer, accept it.
 	err = AcceptLink(db, actorAccount, args.PeerId)
 	if err != nil {
-		panic("failed to accept")
+		http.Error(w, "failed to accept", http.StatusBadRequest)
+		return
 	}
 
 	stateResponse := &StateResponse{
@@ -157,17 +177,85 @@ func AcceptHandler(w http.ResponseWriter, r *http.Request){
 	}
 }
 
+/**
+ * Set a payload for the current connection.
+ */
 func setPicture(w http.ResponseWriter, r *http.Request){
+	db := Connect()
+	defer db.Close()
+
+	actorAccount, err := ReadAuth(db, r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("auth not found %s", err), http.StatusUnauthorized)
+		return
+	}
+
+	err = r.ParseMultipartForm(1024 * 1024 * 5)
+	if err != nil {
+		http.Error(w, "failed to parse request", http.StatusBadRequest)
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "failed to find file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+
+	buf := NewBuffer(nil)
+	if _, err := io.Copy(buf, file); err != nil {
+		http.Error(w, "failed to copy file", http.StatusInternalServerError)
+		return
+	}
+
+	err = RecordNewPayload(db, actorAccount.Id, buf.Bytes())
+	if err != nil {
+		http.Error(w, "failed to record payload", http.StatusBadRequest)
+		return
+	}
+
 	// out: {peerShouldFetch: 'true'}
 }
 
 func getPicture(w http.ResponseWriter, r *http.Request){
-	// out: the image binary
+	db := Connect()
+	defer db.Close()
+
+	actorAccount, err := ReadAuth(db, r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("auth not found %s", err), http.StatusUnauthorized)
+		return
+	}
+
+	data, err := FetchPayload(db, actorAccount.Id)
+	if err != nil {
+		http.Error(w, "No payload available", http.StatusBadRequest)
+		return
+	}
+
+	w.Write(data)
 }
 
 
 func clearPicture(w http.ResponseWriter, r *http.Request){
-	// out: {shouldFetch: 'false'}
+	db := Connect()
+	defer db.Close()
+
+	actorAccount, err := ReadAuth(db, r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("auth not found %s", err), http.StatusUnauthorized)
+		return
+	}
+
+	err = ClearPayload(db, actorAccount.Id)
+	if err != nil {
+		http.Error(w, "No payload available", http.StatusBadRequest)
+		return
+	}
+
+	// out: {peerShouldFetch: 'true'}
 }
 
 

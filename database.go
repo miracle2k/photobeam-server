@@ -4,6 +4,7 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 	"github.com/go-pg/pg/v10/pgext"
+	"time"
 )
 
 type Account struct {
@@ -21,12 +22,23 @@ type Connection struct {
 	TimeCreated string
 }
 
+func (c *Connection) GetPeerId(userId int) int {
+	if c.InitiatorId == userId {
+		return c.InviteeId;
+	}
+	return c.InitiatorId
+}
+
 type Payload struct {
 	ConnectionId int `pg:",pk"`
 	FromId int `pg:",pk"`
-	TimeCreated string
-	TimeFetched string
+	TimeCreated time.Time
+	TimeFetched pg.NullTime
 	Fetched bool
+
+	// We store the photo itself here, but only because it is basically a temporary storage. It will
+	// be cleared out as soon as the image is fetched. Just make sure you do ExcludeColumn().
+	Data []byte
 }
 
 
