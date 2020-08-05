@@ -13,7 +13,7 @@ import (
  */
 func LinkAccounts(db *pg.DB, initiator *Account, target *Account, Status string) error {
 	// Initiator closes all their connections immediately.
-	_, err := db.Model(new(Connection)).Where("left_id = ?0 OR right_id = ?0", initiator.Id).Delete()
+	_, err := db.Model(new(Connection)).Where("invitee_id = ?0 OR initiator_id = ?0", initiator.Id).Delete()
 	if err != nil {
 		panic(fmt.Sprintf("failed to delete %s", err))
 	}
@@ -73,7 +73,6 @@ func RecordNewPayload(db *pg.DB, senderId int, data []byte) error {
 		ConnectionId: connection.Id,
 		FromId: senderId,
 		TimeCreated: time.Now(),
-		TimeFetched: nil,
 		Fetched: false,
 		Data: data,
 	}

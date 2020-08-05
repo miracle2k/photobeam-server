@@ -42,6 +42,7 @@ type Payload struct {
 }
 
 
+// Do createdb & dropdb for a full reset
 func CreateSchema(db *pg.DB) error {
 	models := []interface{}{
 		(*Account)(nil),

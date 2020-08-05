@@ -11,7 +11,9 @@ import (
 	"log"
 	rand "math/rand"
 	"net/http"
+	"os"
 	"time"
+	"github.com/urfave/cli/v2" // imports as package "cli"
 )
 
 
@@ -111,6 +113,7 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request){
 
 	err = LinkAccounts(db, account, otherAccount, "pending")
 	if err != nil {
+		log.Printf("LinkAccounts failed: %s", err)
 		http.Error(w, "could not link accounts", http.StatusBadRequest)
 		return
 	}
@@ -272,7 +275,31 @@ func handleRequests() {
 }
 
 func main() {
-	db := Connect()
-	CreateSchema(db)
-	//handleRequests()
+	app := &cli.App{
+		Name: "photobeam-server",
+		Usage: "go beam!",
+		Commands: []*cli.Command{
+			{
+				Name:    "run",
+				Usage:   "run the server",
+				Action:  func(c *cli.Context) error {
+					handleRequests()
+					return nil
+				},
+			},
+			{
+				Name:    "createdb",
+				Usage:   "create the database",
+				Action:  func(c *cli.Context) error {
+					db := Connect()
+					CreateSchema(db)
+					return nil
+				},
+			},
+		},
+	}
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

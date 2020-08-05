@@ -90,8 +90,8 @@ func RunConnectHandler(from *Account, to *Account) (string, error) {
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
-		return "", fmt.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+		panic(fmt.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK))
 	}
 
 	return rr.Body.String(), nil
@@ -101,7 +101,7 @@ func TestConnectHandler(t *testing.T) {
 	db := Connect()
 	defer db.Close()
 
-	// Create 3 accounts
+	// Create a set of accounts
 	account1 := &Account{
 		Key: "key1",
 		ConnectCode: "code1",
@@ -123,6 +123,7 @@ func TestConnectHandler(t *testing.T) {
 		panic(err)
 	}
 
+	// Prelink certain accounts
 	LinkAccounts(db, account1, account2, "live")
 	LinkAccounts(db, account3, account4, "live")
 
