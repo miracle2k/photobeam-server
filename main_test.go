@@ -71,7 +71,6 @@ func TestRegisterHandler(t *testing.T) {
 	}
 }
 
-
 func RunConnectHandler(from *Account, to *Account) (string, error) {
 	buf := new(bytes.Buffer)
 	json.NewEncoder(buf).Encode(ConnectArguments{
@@ -103,19 +102,19 @@ func TestConnectHandler(t *testing.T) {
 
 	// Create a set of accounts
 	account1 := &Account{
-		Key: "key1",
+		Key:         "key1",
 		ConnectCode: "code1",
 	}
 	account2 := &Account{
-		Key: "key2",
+		Key:         "key2",
 		ConnectCode: "code2",
 	}
 	account3 := &Account{
-		Key: "key3",
+		Key:         "key3",
 		ConnectCode: "code3",
 	}
 	account4 := &Account{
-		Key: "key4",
+		Key:         "key4",
 		ConnectCode: "code4",
 	}
 	err := db.Insert(account1, account2, account3, account4)

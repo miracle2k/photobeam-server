@@ -7,9 +7,11 @@ import (
 	"time"
 )
 
+const PENDING = "pending";
+
 type Account struct {
-	Id int
-	Key string
+	Id          int
+	Key         string
 	ConnectCode string
 	TimeCreated string
 }
@@ -18,29 +20,28 @@ type Connection struct {
 	Id          int
 	InitiatorId int
 	InviteeId   int
-	Status      string   // pending, confirmed
+	Status      string  // pending, confirmed
 	TimeCreated string
 }
 
 func (c *Connection) GetPeerId(userId int) int {
 	if c.InitiatorId == userId {
-		return c.InviteeId;
+		return c.InviteeId
 	}
 	return c.InitiatorId
 }
 
 type Payload struct {
 	ConnectionId int `pg:",pk"`
-	FromId int `pg:",pk"`
-	TimeCreated time.Time
-	TimeFetched pg.NullTime
-	Fetched bool
+	FromId       int `pg:",pk"`
+	TimeCreated  time.Time
+	TimeFetched  pg.NullTime
+	Fetched      bool
 
 	// We store the photo itself here, but only because it is basically a temporary storage. It will
 	// be cleared out as soon as the image is fetched. Just make sure you do ExcludeColumn().
 	Data []byte
 }
-
 
 // Do createdb & dropdb for a full reset
 func CreateSchema(db *pg.DB) error {
@@ -71,4 +72,3 @@ func Connect() *pg.DB {
 	db.AddQueryHook(pgext.DebugHook{})
 	return db
 }
-
