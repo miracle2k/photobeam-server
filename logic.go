@@ -4,15 +4,35 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-pg/pg/v10"
+	"github.com/go-pg/pg/v10/orm"
 	"time"
 )
+
+
+func UnlinkAnyConnection(db *pg.DB, account *Account, connectionIdToKeep int) error {
+	var query *orm.Query;
+	if connectionIdToKeep != 0 {
+		query = db.Model(new(Connection)).Where("(invitee_id = ?0 OR initiator_id = ?0) AND id != ?1", account.Id, connectionIdToKeep)
+	} else {
+		query = db.Model(new(Connection)).Where("invitee_id = ?0 OR initiator_id = ?0", account.Id)
+	}
+	_, err := query.Delete()
+	if err != nil {
+		panic(fmt.Sprintf("failed to delete %s", err))
+	}
+
+	// TODO: Delete all payloads
+
+	return nil;
+}
+
 
 /**
  * Create a pending connection to the target, and leave any current connections.
  */
 func LinkAccounts(db *pg.DB, initiator *Account, target *Account, Status string) error {
 	// Initiator closes all their connections immediately.
-	_, err := db.Model(new(Connection)).Where("invitee_id = ?0 OR initiator_id = ?0", initiator.Id).Delete()
+	err := UnlinkAnyConnection(db, initiator, 0)
 	if err != nil {
 		panic(fmt.Sprintf("failed to delete %s", err))
 	}
@@ -52,11 +72,11 @@ func AcceptLink(db *pg.DB, acceptor *Account, peerId int) error {
 	}
 
 	// Delete all other connections by the acceptor.
-	_, err = db.Model(new(Connection)).Where("(left_id = ?0 OR right_id = ?0) AND id != ?1", acceptor.Id, connection.Id).Delete()
+	err = UnlinkAnyConnection(db, acceptor, connection.Id)
 	if err != nil {
 		return err
 	}
-	// TODO: Delete all payloads
+
 
 	return nil
 }

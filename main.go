@@ -10,6 +10,7 @@ import (
 func handleRequests() {
 	http.HandleFunc("/register", RegisterHandler)
 	http.HandleFunc("/connect", ConnectHandler)
+	http.HandleFunc("/disconnect", DisconnectHandler)
 	http.HandleFunc("/query", QueryHandler)
 	http.HandleFunc("/accept", AcceptHandler)
 	http.HandleFunc("/set", SetPictureHandler)

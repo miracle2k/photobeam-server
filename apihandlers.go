@@ -37,6 +37,10 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 /**
  * Called to connect to a peer. If you are already connected to someone, will unconnect.
+ *
+ * Argument includes a connection code. If there is no peer with this code, return status 400.
+ *
+ * Otherwise, return a State update.
  */
 func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 	db := Connect()
@@ -79,6 +83,33 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 }
+
+
+/**
+ * Called to disconnect from the current connection.
+ */
+func DisconnectHandler(w http.ResponseWriter, r *http.Request) {
+	db := Connect()
+	defer db.Close()
+
+	canAccess, account := ValidateAuth(db, r, w)
+	if !canAccess {
+		return
+	}
+
+	err := UnlinkAnyConnection(db, account, 0)
+	if err != nil {
+		log.Printf("UnlinkAnyConnection failed: %s", err)
+		http.Error(w, "could not unlink connection", http.StatusBadRequest)
+		return
+	}
+
+	stateResponse := &StateResponse{}
+	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
+		panic(err)
+	}
+}
+
 
 /**
  * Return the current state of your account, including connected to who? Are there pending requests?
