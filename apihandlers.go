@@ -178,7 +178,9 @@ func AcceptHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
- * Set a payload for the current connection.
+ * Set a payload for the current connection. This is a multipart form request with the following keys:
+
+ * file: the file to be uploaded
  */
 func SetPictureHandler(w http.ResponseWriter, r *http.Request) {
 	db := Connect()

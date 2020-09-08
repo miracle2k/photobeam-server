@@ -62,7 +62,7 @@ func AcceptLink(db *pg.DB, acceptor *Account, peerId int) error {
 }
 
 /**
- * A user set a new payload for the partner.
+ * A user sets a new payload for the partner.
  */
 func RecordNewPayload(db *pg.DB, senderId int, data []byte) error {
 	// Find a connection for this user.
@@ -95,7 +95,7 @@ func RecordNewPayload(db *pg.DB, senderId int, data []byte) error {
 func QueryPayload(db *pg.DB, connectionId int, accountId int) (bool, bool, error) {
 	var payloads []Payload
 	err := db.Model(&payloads).
-		Where("connectionId = ? AND fetched = false", connectionId).
+		Where("connection_id = ? AND fetched = false", connectionId).
 		Limit(2).
 		Select();
 
