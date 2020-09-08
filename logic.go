@@ -95,7 +95,7 @@ func RecordNewPayload(db *pg.DB, senderId int, data []byte) error {
 func QueryPayload(db *pg.DB, connectionId int, accountId int) (bool, bool, error) {
 	var payloads []Payload
 	err := db.Model(&payloads).
-		Where("connection_id = ? AND fetched = false", connectionId).
+		Where("connection_id = ? AND fetched IS NULL", connectionId).
 		Limit(2).
 		Select();
 
