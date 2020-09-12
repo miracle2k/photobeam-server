@@ -7,6 +7,13 @@ import (
 	"os"
 )
 
+func logRequest(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func handleRequests() {
 	http.HandleFunc("/register", RegisterHandler)
 	http.HandleFunc("/connect", ConnectHandler)
@@ -18,7 +25,7 @@ func handleRequests() {
 	http.HandleFunc("/clear", ClearPictureHandler)
 
 	log.Print("Running on port :10000")
-	log.Fatal(http.ListenAndServe(":10000", nil))
+	log.Fatal(http.ListenAndServe(":10000", logRequest(http.DefaultServeMux)))
 }
 
 func main() {

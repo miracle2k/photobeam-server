@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/go-pg/pg/v10"
 	"github.com/satori/go.uuid"
 	"io"
 	"log"
@@ -78,6 +79,8 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 	stateResponse := &StateResponse{
 		PeerId: otherAccount.Id,
 		Status: "pending",
+		ShouldFetch: false,
+		ShouldPeerFetch: false,
 	}
 	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
 		panic(err)
@@ -123,8 +126,7 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connection := new(Connection)
-	err := db.Model(connection).Where("invitee_id = ?0 OR initiator_id = ?1", account.Id, account.Id).Select()
+	connection, err := GetConnection(db, account.Id)
 	if err != nil {
 		// TODO: What about connection errors?
 		if !isBadConn(err, false) {
@@ -155,18 +157,49 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 		status = "connected"
 	}
 
-	accountShouldFetch, peerShouldFetch, err := QueryPayload(db, connection.Id, account.Id)
+	stateResponse := &StateResponse{
+		PeerId: peerId,
+		Status: status,
+	}
+	err = CompleteFetchResponse(stateResponse, db, connection, account)
 	if err != nil {
 		log.Printf("QueryPayload failed: %s", err)
 		http.Error(w, "could not query payload", http.StatusBadRequest)
 		return
 	}
 
+	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
+		panic(err)
+	}
+}
+
+func CompleteFetchResponse(response *StateResponse, db *pg.DB, connection *Connection, account *Account) error {
+	accountShouldFetch, peerShouldFetch, err := QueryPayload(db, connection.Id, account.Id)
+	if err != nil {
+		return err;
+	}
+
+	response.ShouldPeerFetch = peerShouldFetch;
+	response.ShouldFetch = accountShouldFetch;
+	return nil
+}
+
+func WriteBackConnectedResponse(w http.ResponseWriter, db *pg.DB, account *Account) {
+	connection, err := GetConnection(db, account.Id)
+	if err != nil {
+		http.Error(w, "unexpectedly connection is missing", http.StatusBadRequest)
+		return
+	}
+
 	stateResponse := &StateResponse{
-		PeerId: peerId,
-		Status: status,
-		ShouldFetch: accountShouldFetch,
-		ShouldPeerFetch: peerShouldFetch,
+		PeerId: connection.GetPeerId(account.Id),
+		Status: "connected",
+	}
+	err = CompleteFetchResponse(stateResponse, db, connection, account)
+	if err != nil {
+		log.Printf("QueryPayload failed: %s", err)
+		http.Error(w, "could not query payload", http.StatusBadRequest)
+		return
 	}
 	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
 		panic(err)
@@ -175,6 +208,7 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 
 /**
  * Accept a connection request from a peer (and break any existing connection).
+ * TODO: Support "no"
  */
 func AcceptHandler(w http.ResponseWriter, r *http.Request) {
 	db := Connect()
@@ -200,8 +234,10 @@ func AcceptHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stateResponse := &StateResponse{
-		PeerId: 1,
-		Status: "pending",
+		PeerId: args.PeerId,
+		Status: "connected",
+		ShouldFetch: false,
+		ShouldPeerFetch: false,
 	}
 	if err := json.NewEncoder(w).Encode(stateResponse); err != nil {
 		panic(err)
@@ -247,7 +283,7 @@ func SetPictureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// out: {peerShouldFetch: 'true'}
+	WriteBackConnectedResponse(w, db, actorAccount)
 }
 
 func GetPictureHandler(w http.ResponseWriter, r *http.Request) {
@@ -283,5 +319,5 @@ func ClearPictureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// out: {peerShouldFetch: 'true'}
+	WriteBackConnectedResponse(w, db, actorAccount)
 }

@@ -136,13 +136,23 @@ func QueryPayload(db *pg.DB, connectionId int, accountId int) (bool, bool, error
 	}
 }
 
+
+func GetConnection(db *pg.DB, accountId int) (*Connection, error) {
+	// Find a connection for this user.
+	connection := new(Connection)
+	err := db.Model(connection).Where("invitee_id = ?0 OR initiator_id = ?0", accountId).Select()
+	if err != nil {
+		return nil, errors.New("User has no connection")
+	}
+	return connection, nil
+}
+
 /**
  * A user set a new payload for the partner.
  */
 func FetchPayload(db *pg.DB, fetcherId int) ([]byte, error) {
 	// Find a connection for this user.
-	connection := new(Connection)
-	err := db.Model(connection).Where("invitee_id = ?0 OR initiator_id = ?0", fetcherId).Select()
+	connection, err := GetConnection(db, fetcherId)
 	if err != nil {
 		return nil, errors.New("User has no connection")
 	}
@@ -151,7 +161,7 @@ func FetchPayload(db *pg.DB, fetcherId int) ([]byte, error) {
 
 	// Find a payload
 	payload := new(Payload)
-	err = db.Model(payload).Where("connection_id = ?0 OR from_id = ?1", connection.Id, peerId).Select()
+	err = db.Model(payload).Where("connection_id = ?0 AND from_id = ?1", connection.Id, peerId).Select()
 	if err != nil {
 		return nil, errors.New("No payload available")
 	}
@@ -178,7 +188,7 @@ func ClearPayload(db *pg.DB, fetcherId int) error {
 
 	// Find a payload
 	payload := new(Payload)
-	err = db.Model(payload).Where("connection_id = ?0 OR from_id = ?1", connection.Id, peerId).Select()
+	err = db.Model(payload).Where("connection_id = ?0 AND from_id = ?1", connection.Id, peerId).Select()
 	if err != nil {
 		return err
 	}

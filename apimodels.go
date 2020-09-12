@@ -29,4 +29,7 @@ type ConnectArguments struct {
 
 type AcceptArguments struct {
 	PeerId int `json:"peerId"`
+
+	// Set this to false to reject the connection request instead
+	Accept bool `json:"accept"`
 }
