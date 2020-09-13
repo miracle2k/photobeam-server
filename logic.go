@@ -137,6 +137,9 @@ func QueryPayload(db *pg.DB, connectionId int, accountId int) (bool, bool, error
 }
 
 
+/**
+ * Find the current connection for this account.
+ */
 func GetConnection(db *pg.DB, accountId int) (*Connection, error) {
 	// Find a connection for this user.
 	connection := new(Connection)
@@ -148,7 +151,7 @@ func GetConnection(db *pg.DB, accountId int) (*Connection, error) {
 }
 
 /**
- * A user set a new payload for the partner.
+ * Get the payload for this user to download.
  */
 func FetchPayload(db *pg.DB, fetcherId int) ([]byte, error) {
 	// Find a connection for this user.

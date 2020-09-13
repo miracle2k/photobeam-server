@@ -128,8 +128,7 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 
 	connection, err := GetConnection(db, account.Id)
 	if err != nil {
-		// TODO: What about connection errors?
-		if !isBadConn(err, false) {
+		if isBadConn(err, false) {
 			panic(err);
 			return;
 		}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-pg/pg/v10"
+	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -49,6 +50,7 @@ func ValidateAuth(db *pg.DB, r *http.Request, w http.ResponseWriter) (bool, *Acc
 	actorAccount, err := ReadAuth(db, r)
 	if err != nil {
 		if isBadConn(err, false) {
+			log.Println("bad connection!")
 			panic(err);
 		}
 		http.Error(w, fmt.Sprintf("auth not found: %s", err), http.StatusUnauthorized)
@@ -57,11 +59,16 @@ func ValidateAuth(db *pg.DB, r *http.Request, w http.ResponseWriter) (bool, *Acc
 	return true, actorAccount
 }
 
+/**
+ * This is supposed to differentiate between `pg` module errors which are query problems
+ * (no results returned, for example), and errors such as "no connection to database".
+ */
 func isBadConn(err error, allowTimeout bool) bool {
 	if err == nil {
 		return false
 	}
-	fmt.Print(err)
+
+	// Fatal errors seem to be the connection ones, such as: "database does not exist"
 	if pgErr, ok := err.(pg.Error); ok {
 		return pgErr.Field('S') == "FATAL"
 	}
@@ -70,5 +77,7 @@ func isBadConn(err error, allowTimeout bool) bool {
 			return !netErr.Temporary()
 		}
 	}
-	return true
+
+	// In other cases, assume no.
+	return false
 }
