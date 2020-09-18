@@ -23,6 +23,10 @@ type AccountResponse struct {
 
 // Arguments for various kinds of API calls.
 
+type SetPropsArguments struct {
+	ApnsToken *string `json:"apnsToken"`
+}
+
 type ConnectArguments struct {
 	ConnectCode string `json:"connectCode"`
 }

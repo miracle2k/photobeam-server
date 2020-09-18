@@ -36,6 +36,44 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func SetPropsHandler(w http.ResponseWriter, r *http.Request) {
+	db := Connect()
+	defer db.Close()
+
+	canAccess, account := ValidateAuth(db, r, w)
+	if !canAccess {
+		return
+	}
+
+	var args SetPropsArguments
+	err := GetFromReq(w, r, &args)
+	if err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if args.ApnsToken != nil {
+		account.ApnsToken = *args.ApnsToken
+	}
+
+	// Update the account
+	err = db.Update(account)
+	if err != nil {
+		http.Error(w, "error changing props", http.StatusInternalServerError)
+		return
+	}
+
+	accountResponse := &AccountResponse{
+		AccountId:   account.Id,
+		ConnectCode: account.ConnectCode,
+		// We probably do not want to return the key again
+		AuthKey:     account.Key,
+	}
+	if err := json.NewEncoder(w).Encode(accountResponse); err != nil {
+		panic(err)
+	}
+}
+
 /**
  * Called to connect to a peer. If you are already connected to someone, will unconnect.
  *

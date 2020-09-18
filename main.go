@@ -16,6 +16,7 @@ func logRequest(handler http.Handler) http.Handler {
 
 func handleRequests() {
 	http.HandleFunc("/register", RegisterHandler)
+	http.HandleFunc("/setprops", SetPropsHandler)
 	http.HandleFunc("/connect", ConnectHandler)
 	http.HandleFunc("/disconnect", DisconnectHandler)
 	http.HandleFunc("/query", QueryHandler)

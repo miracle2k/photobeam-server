@@ -12,6 +12,7 @@ const PENDING = "pending";
 type Account struct {
 	Id          int
 	Key         string
+	ApnsToken   string
 	ConnectCode string
 	TimeCreated string
 }
