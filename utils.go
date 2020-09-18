@@ -42,7 +42,6 @@ func ReadAuth(db *pg.DB, r *http.Request) (*Account, error) {
 		Where("key = ?", authKey).
 		Limit(1).
 		Select()
-	fmt.Print(account)
 	return account, err
 }
 

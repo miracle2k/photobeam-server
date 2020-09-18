@@ -8,6 +8,20 @@ import (
 	"time"
 )
 
+/**
+ * Find the current connection for this account.
+ */
+func GetConnection(db *pg.DB, accountId int) (*Connection, error) {
+	// Find a connection for this user.
+	connection := new(Connection)
+	err := db.Model(connection).Where("invitee_id = ?0 OR initiator_id = ?0", accountId).Select()
+	if err != nil {
+		return nil, errors.New("User has no connection")
+	}
+	return connection, nil
+}
+
+
 
 func UnlinkAnyConnection(db *pg.DB, account *Account, connectionIdToKeep int) error {
 	var query *orm.Query;
@@ -84,12 +98,11 @@ func AcceptLink(db *pg.DB, acceptor *Account, peerId int) error {
 /**
  * A user sets a new payload for the partner.
  */
-func RecordNewPayload(db *pg.DB, senderId int, data []byte) error {
+func RecordNewPayload(db *pg.DB, senderId int, data []byte) (int, error) {
 	// Find a connection for this user.
-	connection := new(Connection)
-	err := db.Model(connection).Where("invitee_id = ?0 OR initiator_id = ?0", senderId).Select()
+	connection, err := GetConnection(db, senderId)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Create a new payload record
@@ -103,9 +116,10 @@ func RecordNewPayload(db *pg.DB, senderId int, data []byte) error {
 
 	err = db.Insert(payload)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+
+	return connection.GetPeerId(senderId), nil
 }
 
 /**
@@ -134,20 +148,6 @@ func QueryPayload(db *pg.DB, connectionId int, accountId int) (bool, bool, error
 	} else {
 		return true, true, nil
 	}
-}
-
-
-/**
- * Find the current connection for this account.
- */
-func GetConnection(db *pg.DB, accountId int) (*Connection, error) {
-	// Find a connection for this user.
-	connection := new(Connection)
-	err := db.Model(connection).Where("invitee_id = ?0 OR initiator_id = ?0", accountId).Select()
-	if err != nil {
-		return nil, errors.New("User has no connection")
-	}
-	return connection, nil
 }
 
 /**

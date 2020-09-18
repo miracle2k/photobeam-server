@@ -2,4 +2,5 @@ Dockerfile
 .github
 .git
 .idea
+*.p12
 /photobeam-server

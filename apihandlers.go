@@ -314,9 +314,15 @@ func SetPictureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = RecordNewPayload(db, actorAccount.Id, buf.Bytes())
+	peerId, err := RecordNewPayload(db, actorAccount.Id, buf.Bytes())
 	if err != nil {
 		http.Error(w, "failed to record payload", http.StatusBadRequest)
+		return
+	}
+
+	err = SendNotificationToAccountId(db, peerId)
+	if err != nil {
+		http.Error(w, "failed to find peer account record", http.StatusInternalServerError)
 		return
 	}
 

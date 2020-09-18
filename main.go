@@ -51,6 +51,22 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:  "test-apns",
+				Usage: "test push notification service",
+				Flags: []cli.Flag{
+					&cli.IntFlag{Name: "account"},
+				},
+				Action: func(c *cli.Context) error {
+					accountId := c.Int("account")
+					db := Connect()
+					err := SendNotificationToAccountId(db, accountId)
+					if err != nil {
+						log.Println("Error: ", err)
+					}
+					return nil
+				},
+			},
 		},
 	}
 	err := app.Run(os.Args)
