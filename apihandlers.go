@@ -295,21 +295,25 @@ func SetPictureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := r.ParseMultipartForm(1024 * 1024 * 5)
-	if err != nil {
-		http.Error(w, "failed to parse request", http.StatusBadRequest)
-		return
-	}
-
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "failed to find file", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
+	// This was a previous attempt when we uploaded via a form (the Moya code in the iOS client still does this).
+	// However, on iOS, to use an upload task in the background, we need to accept the files like this.
+	//err := r.ParseMultipartForm(1024 * 1024 * 5)
+	//if err != nil {
+	//	log.Println("failed to parse request")
+	//	http.Error(w, "failed to parse request", http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//file, _, err := r.FormFile("file")
+	//if err != nil {
+	//	log.Println("failed to find file in request")
+	//	http.Error(w, "failed to find file", http.StatusBadRequest)
+	//	return
+	//}
+	//defer file.Close()
 
 	buf := bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, file); err != nil {
+	if _, err := io.Copy(buf, r.Body); err != nil {
 		http.Error(w, "failed to copy file", http.StatusInternalServerError)
 		return
 	}
