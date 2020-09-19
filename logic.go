@@ -105,6 +105,14 @@ func RecordNewPayload(db *pg.DB, senderId int, data []byte) (int, error) {
 		return 0, err
 	}
 
+	// replace any existing one (or change pk)
+	var query *orm.Query;
+	query = db.Model(new(Payload)).Where("connection_id = ?0 AND from_id = ?1", connection.Id, senderId)
+	_, err = query.Delete()
+	if err != nil {
+		panic(fmt.Sprintf("failed to delete %s", err))
+	}
+
 	// Create a new payload record
 	payload := &Payload{
 		ConnectionId: connection.Id,
@@ -177,7 +185,7 @@ func FetchPayload(db *pg.DB, fetcherId int) ([]byte, error) {
 }
 
 /**
- * Once a client has the payload safely in their hands, delete it.
+ * Once a client has the payload safely in their hands, mark it as fetched
  */
 func ClearPayload(db *pg.DB, fetcherId int) error {
 	// Find a connection for this user.
